@@ -5,6 +5,7 @@ import {
   Mail,
   BookOpen,
   Calendar,
+  CalendarCheck,
   Clock,
   User,
   History,
@@ -16,6 +17,7 @@ import {
 import { Lead, LeadStatus, Activity } from '../../types/crm.types';
 import { leadService } from '../../services/leadService';
 import { activityService } from '../../services/activityService';
+import { CreateFollowUpModal } from '../followups/CreateFollowUpModal';
 
 interface LeadDetailModalProps {
   leadId: string | null;
@@ -34,6 +36,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'activities'>('details');
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
 
   // Edit states
   const [status, setStatus] = useState<LeadStatus>('New');
@@ -371,6 +374,15 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           </button>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={() => setIsScheduleOpen(true)}
+              className="btn btn-secondary"
+              style={{ color: '#2563eb', borderColor: '#bfdbfe' }}
+            >
+              <CalendarCheck size={15} />
+              <span>Schedule Follow-up</span>
+            </button>
             <button type="button" onClick={onClose} className="btn btn-secondary">
               Close
             </button>
@@ -386,6 +398,19 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {lead && (
+        <CreateFollowUpModal
+          isOpen={isScheduleOpen}
+          onClose={() => setIsScheduleOpen(false)}
+          preselectedLeadId={lead.id}
+          preselectedLeadName={lead.full_name}
+          onFollowUpCreated={async () => {
+            await loadLead(lead.id);
+            onLeadUpdated();
+          }}
+        />
+      )}
     </div>
   );
 };
