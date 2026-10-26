@@ -2,23 +2,17 @@ import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { ConfigBanner } from '../common/ConfigBanner';
+import { useAuth } from '../../hooks/useAuth';
 
 interface AppLayoutProps {
   onQuickAddLead?: () => void;
-  currentUser?: {
-    name: string;
-    role: string;
-  } | null;
-  onSignOut?: () => void;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({
-  onQuickAddLead,
-  currentUser,
-  onSignOut
-}) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ onQuickAddLead }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { profile, signOut } = useAuth();
 
   const getPageTitle = (pathname: string) => {
     switch (pathname) {
@@ -42,10 +36,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <Sidebar
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        currentUser={currentUser}
-        onSignOut={onSignOut}
+        currentUser={
+          profile
+            ? { name: profile.full_name, role: profile.role }
+            : { name: 'Admissions Counsellor', role: 'counsellor' }
+        }
+        onSignOut={signOut}
       />
       <div className="main-wrapper">
+        <ConfigBanner />
         <Header
           title={getPageTitle(location.pathname)}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
