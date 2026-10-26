@@ -12,6 +12,11 @@ import { LeadModal } from './components/leads/LeadModal';
 
 export function App() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleLeadCreated = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   return (
     <AuthProvider>
@@ -31,7 +36,12 @@ export function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route
               path="/leads"
-              element={<LeadsPage onOpenCreateModal={() => setIsLeadModalOpen(true)} />}
+              element={
+                <LeadsPage
+                  onOpenCreateModal={() => setIsLeadModalOpen(true)}
+                  refreshTrigger={refreshTrigger}
+                />
+              }
             />
             <Route path="/followups" element={<FollowUpsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
@@ -44,6 +54,7 @@ export function App() {
         <LeadModal
           isOpen={isLeadModalOpen}
           onClose={() => setIsLeadModalOpen(false)}
+          onLeadCreated={handleLeadCreated}
         />
       </BrowserRouter>
     </AuthProvider>

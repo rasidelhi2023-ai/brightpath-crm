@@ -31,6 +31,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       leads: {
         Row: {
@@ -78,6 +79,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       follow_ups: {
         Row: {
@@ -113,6 +115,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       activities: {
         Row: {
@@ -142,7 +145,27 @@ export interface Database {
           metadata?: Json | null;
           created_at?: string;
         };
+        Relationships: [];
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      is_manager_or_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }

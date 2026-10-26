@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Phone, Mail, BookOpen, Share2 } from 'lucide-react';
-import { LeadSource, LeadStatus } from '../../types/crm.types';
+import { X, UserPlus, Phone, Mail, AlertCircle } from 'lucide-react';
+import { LeadSource } from '../../types/crm.types';
+import { leadService } from '../../services/leadService';
 
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmitLead?: (leadData: any) => void;
+  onLeadCreated?: () => void;
 }
 
 export const LeadModal: React.FC<LeadModalProps> = ({
   isOpen,
   onClose,
-  onSubmitLead
+  onLeadCreated,
 }) => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -20,6 +21,8 @@ export const LeadModal: React.FC<LeadModalProps> = ({
   const [source, setSource] = useState<LeadSource>('Website');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -27,31 +30,49 @@ export const LeadModal: React.FC<LeadModalProps> = ({
     const errs: { [key: string]: string } = {};
     if (!fullName.trim()) errs.fullName = 'Student name is required';
     if (!phone.trim()) errs.phone = 'Phone number is required';
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errs.email = 'Invalid email address format';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setFullName('');
+    setPhone('');
+    setEmail('');
+    setCourseInterest('Data Science & AI');
+    setSource('Website');
+    setNotes('');
+    setErrors({});
+    setServerError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    if (onSubmitLead) {
-      onSubmitLead({
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim() || null,
-        courseInterest,
-        source,
-        notes: notes.trim() || null,
-      });
-    } else {
-      alert(`Lead "${fullName}" created! (Persistence activates in Phase 4)`);
-    }
+    setIsSubmitting(true);
+    setServerError(null);
 
-    onClose();
+    const result = await leadService.createLead({
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      email: email.trim() || null,
+      courseInterest,
+      source,
+      notes: notes.trim() || null,
+    });
+
+    if (result.error) {
+      setServerError(result.error);
+      setIsSubmitting(false);
+    } else {
+      setIsSubmitting(false);
+      resetForm();
+      if (onLeadCreated) onLeadCreated();
+      onClose();
+    }
   };
 
   return (
@@ -73,6 +94,13 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
+            {serverError && (
+              <div className="alert alert-danger" style={{ marginBottom: '1.25rem' }}>
+                <AlertCircle size={16} />
+                <span>{serverError}</span>
+              </div>
+            )}
+
             <div className="form-group">
               <label className="form-label required">Student Full Name</label>
               <input
@@ -89,7 +117,16 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               <div className="form-group">
                 <label className="form-label required">Phone Number</label>
                 <div style={{ position: 'relative' }}>
-                  <Phone size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <Phone
+                    size={15}
+                    style={{
+                      position: 'absolute',
+                      left: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                    }}
+                  />
                   <input
                     type="tel"
                     className="form-input"
@@ -105,7 +142,16 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               <div className="form-group">
                 <label className="form-label">Email Address</label>
                 <div style={{ position: 'relative' }}>
-                  <Mail size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <Mail
+                    size={15}
+                    style={{
+                      position: 'absolute',
+                      left: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                    }}
+                  />
                   <input
                     type="email"
                     className="form-input"
@@ -166,11 +212,20 @@ export const LeadModal: React.FC<LeadModalProps> = ({
           </div>
 
           <div className="modal-footer">
-            <button type="button" onClick={onClose} className="btn btn-secondary">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="btn btn-secondary"
+            >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              Save Lead
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn btn-primary"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Lead'}
             </button>
           </div>
         </form>
