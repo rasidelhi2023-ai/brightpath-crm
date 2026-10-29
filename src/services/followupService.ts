@@ -190,14 +190,20 @@ export const followupService = {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return {
+          followUp: null,
+          error: 'Authentication required: You must be signed in to schedule follow-ups. Please visit /auth to sign in.',
+        };
+      }
       const { data, error } = await (supabase.from('follow_ups') as any)
         .insert({
           lead_id: payload.leadId,
-          assigned_to: payload.assignedTo || user?.id || null,
+          assigned_to: payload.assignedTo || user.id,
           due_at: payload.dueAt,
           note: payload.note,
           status: 'pending',
-          created_by: user?.id || null,
+          created_by: user.id,
         })
         .select(`
           *,

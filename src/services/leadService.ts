@@ -216,6 +216,12 @@ export const leadService = {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return {
+          lead: null,
+          error: 'Authentication required: You must be signed in to create a lead. Please visit /auth to sign in.',
+        };
+      }
       const { data, error } = await supabase
         .from('leads')
         .insert({
@@ -226,7 +232,7 @@ export const leadService = {
           source: leadData.source,
           status: 'New',
           notes: leadData.notes || null,
-          created_by: user?.id || null,
+          created_by: user.id,
         })
         .select()
         .single();
