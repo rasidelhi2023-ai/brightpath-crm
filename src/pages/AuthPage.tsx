@@ -39,8 +39,8 @@ export const AuthPage: React.FC = () => {
       if (error) {
         setErrorMessage(error);
       } else {
-        setSuccessMessage('Account created successfully! Check your email or sign in.');
-        setTimeout(() => navigate('/'), 1000);
+        setSuccessMessage('Account registered successfully! Please sign in with your email and password below.');
+        setIsSignUp(false);
       }
     } else {
       const { error } = await signIn(email.trim(), password);

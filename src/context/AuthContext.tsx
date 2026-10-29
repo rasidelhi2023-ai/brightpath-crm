@@ -33,31 +33,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(isSupabaseConfigured());
   const isConfigured = isSupabaseConfigured();
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, defaultName?: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.warn('Profile fetch warning (new profile or migration pending):', error.message);
+      }
+
+      if (data) {
+        setProfile(data as Profile);
+      } else {
         // Fallback default profile with least privileged role
         setProfile({
           id: userId,
-          full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Counsellor',
+          full_name: defaultName || 'Counsellor',
           role: 'counsellor',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
-      } else if (data) {
-        setProfile(data as Profile);
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (!isConfigured) {
@@ -65,22 +68,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+    let isMounted = true;
+
+    // 1. Check active session once on mount
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (!isMounted) return;
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      if (initialSession?.user) {
+        const name = initialSession.user.user_metadata?.full_name || initialSession.user.email?.split('@')[0];
+        fetchProfile(initialSession.user.id, name);
       }
       setLoading(false);
     });
 
-    // Listen to auth state transitions
+    // 2. Listen to auth state transitions
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (!isMounted) return;
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       if (currentSession?.user) {
-        fetchProfile(currentSession.user.id);
+        const name = currentSession.user.user_metadata?.full_name || currentSession.user.email?.split('@')[0];
+        fetchProfile(currentSession.user.id, name);
       } else {
         setProfile(null);
       }
@@ -88,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [isConfigured, fetchProfile]);
@@ -100,7 +110,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { error: error.message };
       if (data.user) {
-        await fetchProfile(data.user.id);
+        setUser(data.user);
+        setSession(data.session);
+        const name = data.user.user_metadata?.full_name || data.user.email?.split('@')[0];
+        await fetchProfile(data.user.id, name);
       }
       return { error: null };
     } catch (err: any) {
@@ -150,7 +163,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async (): Promise<void> => {
     if (user) {
-      await fetchProfile(user.id);
+      const name = user.user_metadata?.full_name || user.email?.split('@')[0];
+      await fetchProfile(user.id, name);
     }
   };
 
